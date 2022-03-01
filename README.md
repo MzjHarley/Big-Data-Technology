@@ -97,4 +97,4 @@ CPU,内存,磁盘,I/O等硬件变成可以动态管理的资源池，从而提�
 |网络与通信技术|短距离无线通信技术（WI-FI,蓝牙,RFID等）和远程通信技术（互联网，移动网络，卫星通信网络等）|
 |数据挖掘和融合技术|如何实现物联网中大量不同类型数据的有效整合，处理和挖掘是物联网处理层需要解决的关键技术问题|
 # 大数据与云计算，物联网的关系
-![contents]()
+![contents](https://github.com/MzjHarley/Big-Data-Technology/blob/main/img/1.png)
