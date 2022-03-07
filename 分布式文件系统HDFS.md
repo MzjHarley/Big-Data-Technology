@@ -21,7 +21,7 @@
 |主节点|也叫名称节点，负责文件和目录的创建，删除和重命名等，同时管理着数据节点和文件块的映射关系|
 |从节点|也叫数据节点，负责存储和读取数据，据名称节点的命令创建，删除和复制数据块|
 
-#![contents](https://github.com/MzjHarley/Big-Data-Technology/blob/main/img/3.png)
+#![contents](https://github.com/MzjHarley/Big-Data-Technology/blob/main/img/4.png)
 
 >客户端只有通过**访问名称节点才能找到请求的文件块所在位置，进而到相应位置读取所需文件块。**  
 >在存储时，由名称节点分配存储位置，然后由客户端把数据写入相应数据节点。  
