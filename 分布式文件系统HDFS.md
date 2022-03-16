@@ -241,6 +241,109 @@ FileSystem中的create()方法返回一个输出流FsDataOutputStream对象，�
 # HDFS API的使用
   
 ```java
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.*;
+import org.apache.hadoop.io.IOUtils;
+
+import java.net.URI;
+
+public class HDFSapp {
+    String hdfsURL = "hdfs://localhost:9000";
+    FileSystem fs=null;
+    Configuration configuration=null;
+    public HDFSapp(){
+        try{
+            /**
+             * 创建一个Configuration对象时，其构造方法会默认加载hadoop中的两个配置文件，分别是hdfs-site.xml以及core-site.xml，
+             * 这两个文件中会有访问hdfs所需的参数值，主要是fs.default.name(namenode:port)，指定了hdfs的地址，客户端就可以通过这个地址访问hdfs了。
+             * 即可理解为configuration就是hadoop中的配置信息。
+             */
+            configuration=new Configuration();
+            /**
+             * FileSystem.get(URI.create(hdfsURL), configuration);
+             * 返回文件系统，读取配置文件在core-site.xml中指定的，如果没有指定，则使用默认的本地文件系统。
+             * 通过URI来明确执行要使用的文件系统.
+             */
+            fs = FileSystem.get(URI.create(hdfsURL), configuration);
+        }catch (Exception e){
+            System.out.println("a exception");
+        }
+    }
+    public static void main(String[] args) {
+        HDFSapp hdfsclient = new HDFSapp();
+        hdfsclient.mkdir();
+        hdfsclient.create();
+        hdfsclient.open();
+        hdfsclient.put();
+        hdfsclient.get();
+        hdfsclient.rename();
+        hdfsclient.detele();
+    }
+
+    private void open() {
+        try {
+            FSDataInputStream input=fs.open(new Path("/test/example.txt"));
+            IOUtils.copyBytes(input,System.out,4096,false);//read from inputstream and print to conmand
+            System.out.println();
+            System.out.println("a file is open！");
+        }catch (Exception e){
+            System.out.println("a exception");
+        }
+    }
+
+    public void mkdir() {
+        try {
+            boolean maked = fs.mkdirs(new Path("/test"));
+            System.out.println("a dir is created！");
+        } catch (Exception e) {
+            System.out.println("a exception");
+        }
+    }
+        public void create() {
+        try {
+            FSDataOutputStream output=fs.create(new Path("/test/example.txt"));
+            output.write("nihao".getBytes());
+            output.flush();
+            output.close();
+            System.out.println("a file is created！");
+        }catch (Exception e){
+            System.out.println("a exception");
+        }
+    }
+    public void put() {
+        try {
+            fs.copyFromLocalFile(new Path("/home/hadoop/example1.txt"),new Path("/test/"));
+            System.out.println("a file is put to HDFS！");
+        }catch (Exception e){
+            System.out.println("a exception");
+        }
+    }
+    public void get() {
+        try {
+            fs.copyToLocalFile(new Path("/test/example.txt"),new Path("/home/hadoop/"));
+            System.out.println("a file is gotten from HDFS！");
+        }catch (Exception e){
+            System.out.println("a exception");
+        }
+    }
+    public void rename() {
+        try{
+            fs.rename(new Path("/test/example.txt"), new Path("/test/renamed.txt"));
+            fs.close();
+            System.out.println("a file is renamed!");
+        }catch(Exception e){
+            System.out.println("a exception");
+        }
+    }
+    public void detele() {
+        try {
+            boolean delete = fs.delete(new Path("/test/renamed.txt"), true);//the second argument :是否递归删除
+            System.out.println("a file is deleted!");
+        }catch (Exception e){
+            System.out.println("a exception");
+        }
+    }
+}
 
 ```
   
