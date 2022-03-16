@@ -168,7 +168,7 @@ HDFS的数据采用了流水线复制的策略，大大提高了数据复制过�
 当数据节点发生故障或者断网时，无法向名称节点发送自己的心跳信息，就会被标记为死机，该数据节点上的所有数据会被标记为不可读，名称节点不会再给它分配任何I/O请求。  
 这时，由于一些数据节点的不可读，会导致一些数据块的副本数量小于冗余因子。  
 名称节点会定期检查这种情况，一旦发现某个数据块的副本数量小于冗余因子，就会启动冗余复制，为它生成新的副本。  
-HDFS系统与其他文件系统最大的区别在于可以调整冗余数据的位置。当故障时可以调整，当出现负载不均衡时也可以调整.
+**HDFS系统与其他文件系统最大的区别在于可以调整冗余数据的位置。当故障时可以调整，当出现负载不均衡时也可以调整.**
 ### 数据出错
 网络传输和磁盘错误等因素都会造成数据错误。客户端在读取数据后会根据MD5和SHA-1对数据块进行校验，以确定读取到正确的数据。  
 在文件被创建时，客户端会对每一个文件块进行信息摘录并将这些信息写入到同一路径下的隐藏文件里面，当客户端读取文件时会先读取该信息文件，利用信息文件对每一个读取的文件块进行校验。  
@@ -183,8 +183,102 @@ HDFS系统与其他文件系统最大的区别在于可以调整冗余数据的�
 
 ## 写数据
 # HDFS命令
+|命令|解释|
+|||
+|||
+|||
+|||
+|||
+|||
+|||
+|||
+|||
+|||
+|||
+|||
+|||
+|||
+|||
+|||
+|||
+|||
+|||
+|||
+|||
+|||
+|||
+|||
+|||
+|||
 # HDFS API的使用
 ```java
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.*;
+import java.net.URI;
+
+public class HDFSapp {
+    String hdfsURL = "hdfs://localhost:9000";
+    FileSystem fs=null;Configuration configuration=null;
+    public HDFSapp(){
+        try{
+            configuration=new Configuration();
+            fs = FileSystem.get(URI.create(hdfsURL), configuration);
+        }catch (Exception e){
+            System.out.println("a exception");
+        }
+    }
+    public static void main(String[] args) {
+        HDFSapp hdfsclient = new HDFSapp();
+        //hdfsclient.mkdir();
+        //hdfsclient.create();
+        //hdfsclient.put();
+        //hdfsclient.get();
+        hdfsclient.detele();
+    }
+    public void mkdir() {
+        try {
+            boolean maked = fs.mkdirs(new Path("/test"));
+            System.out.println("a dir is created！");
+        } catch (Exception e) {
+            System.out.println("a exception");
+        }
+    }
+        public void create() {
+        try {
+            FSDataOutputStream output=fs.create(new Path("/test/example.txt"));
+            output.write("nihao".getBytes());
+            output.flush();
+            output.close();
+            System.out.println("a file is created！");
+        }catch (Exception e){
+            System.out.println("a exception");
+        }
+    }
+    public void put() {
+        try {
+            fs.copyFromLocalFile(new Path("/home/hadoop/example1.txt"),new Path("/test/"));
+            System.out.println("a file is put to HDFS！");
+        }catch (Exception e){
+            System.out.println("a exception");
+        }
+    }
+    public void get() {
+        try {
+            fs.copyToLocalFile(new Path("/test/example.txt"),new Path("/home/hadoop/"));
+            System.out.println("a file is gotten from HDFS！");
+        }catch (Exception e){
+            System.out.println("a exception");
+        }
+    }
+    public void detele() {
+        try {
+            boolean delete = fs.delete(new Path("/test/example.txt"), true);
+            System.out.println("a file is deleted！");
+        }catch (Exception e){
+            System.out.println("a exception");
+        }
+    }
+}
 
 ```
 # 补充:数据均衡
