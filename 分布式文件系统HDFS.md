@@ -161,7 +161,7 @@ HDFS的数据采用了流水线复制的策略，大大提高了数据复制过�
 ### 名称节点出错
 名称节点保存着所有元数据信息，其中最核心的文件为FsImage和EditLog文件，如果这两个文件发生损坏，那么整个HDFS实例将失效。  
 **HDFS采用两种机制保证名称节点的安全：一是将名称节点上的元数据信息同步保存到其他文件系统上如远程挂载的网络文件系统；二是运行一个第二名称节点**。  
-当名称节点死机后可以利用第二名称节点中的元数据信息进行系统恢复，这样做让会丢失部分元数据信息。  
+当名称节点死机后可以利用第二名称节点中的元数据信息进行系统恢复，这样做会丢失部分元数据信息。  
 通常将这两种机制结合使用，当名称节点死机后，会先到远程挂载的网络文件系统获取备份的元数据信息，放在第二名称节点上进行恢复，并把第二名称节点当作名称节点来使用。  
 ### 数据节点出错
 每个数据节点会定期向名称节点发送心跳信息，向名称节点报告自己的状态。  
@@ -179,111 +179,73 @@ HDFS的数据采用了流水线复制的策略，大大提高了数据复制过�
 |MD5|Message Digest Algorithm，消息摘要算法第五版，一种哈希算法，具有很强的抗修改性，原文发生一丁点变化，MD5值就会有很大的不同|
 |SHA-1|Secure Hash Algorithm，安全散列算法，一种哈希算法，比MD5更加安全一点，和MD5的应用场景类似|
 # HDFS数据读写过程
+FileSystem是一个通用的文件系统基类，可以被分布式文件系统继承，所有使用Hadoop文件系统的代码都要使用这个类。  
+Hadoop为这个文件基类提供了很多具体的实现，DistributedFileSystem就是FileSystem在HDFS中的实现。  
+FileSystem中的open()方法返回一个输入流FsDataInputStream对象，在HDFS中具体的输入流就是DFSInputStream。  
+FileSystem中的create()方法返回一个输出流FsDataOutputStream对象，在HDFS中具体的输入流就是DFSOutPutStream。  
 ## 读数据
++ 1.客户端通过FileSystem.open()方法打开文件返回FSDataInputStream，对应在HDFS中，DistributedFileSystem调用open()方法创建一个输入流DFSInputStream  
++ 2.在DFSInputStream的构造函数中，输入流通过ClientProtocal.getBlockLoations()远程调用名称节点获得文件开始部分的数据块的位置。  
+    对于该数据块名称节点返回保存该数据块的数据节点的地址，同时根据距离客户端的远近进行排序；
+    然后DistributedFileSystem会用DFSInputStream会实例化FSDataInputStream并返回给客户端，同时会返回该数据块的数据节点地址；  
++ 3.获取到FSDataInputStream客户端开始调用read()方法读取数据，输入流根据前面的排序结果选择距离客户端最近的数据节点建立连接并读取数据。  
++ 4.数据从数据节点读取到客户端，数据块读取完毕后FSDataInputStream关闭与该数据节点的连接。  
++ 5.输入流根据ClientProtocal.getBlockLocations()方法找到下一个数据块(如果客户端缓存中包含该数据块的信息，则不再调用)  
++ 6.找到该数据块的最佳数据节点，建立连接读取数据。  
++ 7.文件读取完毕后，调用FSDataInputStream.close()方法关闭输入流。 
 
+在读取数据的过程中，如果客户端和数据节点通信时出现错误，就会尝试连接包含此数据块的下一个数据节点。  
 ## 写数据
++ 1.客户端通过FileSystem.creat()方法打开文件返回FSDataOutputStream，对应在HDFS中，DistributedFileSystem调用create()方法创建一个输入流DFSOutputStream  
++ 2.在DFSInputStream的构造函数中，输入流通过RPC远程调用名称节点在文件系统的命名空间创建一个新的文件。  
+    在这过程中名称节点会执行一些检查，比如文件是否存在，客户端是否有权限创建文件等。  
+    然后名称节点会构造一个新文件，并添加文件信息，远程过程调用后DistributedFileSystem会用DFSInputStream会实例化FSDataInputStream并返回给客户端  
+    客户端会使用这个输出流写入数据  
++ 3.获得输出流FSDataOutputStream后，调用write()方法向HDFS问件写入数据。  
++ 4.客户端向FSDataOutputStream写入数据会被分成一个个分包放入到DFSOutputStream对象的内部队列。输出流会向名称节点申请保存文件和副本数据块的若干个数据节点。  
+    这些数据节点形成一个数据流管道，将数据包分发到各个数据节点。  
++ 5.因为数据通过网络发送到不同机器上的各个数据节点，因此为了保证所有数据节点的数据都是准确的，接收到数据的数据节点要向发送者发送确认包。  
+    确认包沿着数据流管道逆流而上依次经过各个数据节点并最终发往客户端，客户端接收到确认包后，会将对应的分包从内部队列中移除。  
+    不断执行3 ~ 5步直至数据写完.  
++ 6.客户端调用FSDataOutputStream.close()方法关闭输出流。当DFSOutputStream对象内部队列中的分包都收到应答，就可用ClientProtocol.complete()方法通知名称节点关闭文件，完成一次正常写过程 
 # HDFS命令
+-R表示递归操作  
+
 |命令|解释|
 |---|---|
-|||
-|||
-|||
-|||
-|||
-|||
-|||
-|||
-|||
-|||
-|||
-|||
-|||
-|||
-|||
-|||
-|||
-|||
-|||
-|||
-|||
-|||
-|||
-|||
-|||
-|||
-# HDFS API的使用
-```java
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.*;
-import java.net.URI;
+|hadoop fs -ls [-R][D]|显示目录下所有文件|
+|hadoop fs -cat[file]|打开文件|
+|hadoop fs -chgrp [-R] group [F/D]|更改文件/目录的所属组|
+|hadoop fs -chown [-R] owner[:group] [F/D]|更改目录/文件所有者[所有组]|
+|hadoop fs -chmod [-R]{ug0}{+-=}{rwx}[F/D]|更改文件目录权限|
+|hadoop fs -tail [-f][F]||显示文件最后1KB内容，-f持续监测新添加的内容|
+|hadoop fs -stat [format] [F/D]|显示文件/目录信息，不加format返回文件创建日期|
+|hadoop fs -touchz [F]|创建文件|
+|hadoop fs -mkdir [-p] [D]|创建目录|
+|hadoop fs -copyFromLocal <localdst> <src>|从本地复制文件/目录到hadoop文件系统中|
+|hadoop fs -copyToLocal <src> <localdst>|从hadoop文件系统中复制文件/目录到本地|
+|hadoop fs -cp[SD/SF][DD]|复制文件|
+|hadoop fs -du [F/D]|显示指定文件及文件夹中所有文件大小|
+|hadoop fs -expunge|清空回收站|
+|hadoop fs -get <src> <localdst>|从hadoop文件系统中复制文件/目录到本地|
+|hadoop fs -getmerge[-nl]<src><localdst>||从hadoop文件系统中合并文件写入到本地，-nl在每个文件结尾添加一个换行符|
+|hadoop fs -put <localdst> <src>|从本地复制文件/目录到hadoop文件系统中|
+|hadoop fs -moveFromLocal <localdst> <src>|从本地复制文件/目录到hadoop文件系统中，删除本地文件|
+|hadoop fs -mv <src> <dst>||
+|hadoop fs -rm [F]|删除文件|
+|hadoop fs -rm -r [D]|删除目录|
+|hadoop fs -test [-zed] [F/D]|检验文件是否为存在，空，为目录|
+|hadoop fs -setrep [-R] [F]|设置文件副本系数|
+|hadoop fs -text [F]|将文件指定输出为文本格式|
 
-public class HDFSapp {
-    String hdfsURL = "hdfs://localhost:9000";
-    FileSystem fs=null;Configuration configuration=null;
-    public HDFSapp(){
-        try{
-            configuration=new Configuration();
-            fs = FileSystem.get(URI.create(hdfsURL), configuration);
-        }catch (Exception e){
-            System.out.println("a exception");
-        }
-    }
-    public static void main(String[] args) {
-        HDFSapp hdfsclient = new HDFSapp();
-        //hdfsclient.mkdir();
-        //hdfsclient.create();
-        //hdfsclient.put();
-        //hdfsclient.get();
-        hdfsclient.detele();
-    }
-    public void mkdir() {
-        try {
-            boolean maked = fs.mkdirs(new Path("/test"));
-            System.out.println("a dir is created！");
-        } catch (Exception e) {
-            System.out.println("a exception");
-        }
-    }
-        public void create() {
-        try {
-            FSDataOutputStream output=fs.create(new Path("/test/example.txt"));
-            output.write("nihao".getBytes());
-            output.flush();
-            output.close();
-            System.out.println("a file is created！");
-        }catch (Exception e){
-            System.out.println("a exception");
-        }
-    }
-    public void put() {
-        try {
-            fs.copyFromLocalFile(new Path("/home/hadoop/example1.txt"),new Path("/test/"));
-            System.out.println("a file is put to HDFS！");
-        }catch (Exception e){
-            System.out.println("a exception");
-        }
-    }
-    public void get() {
-        try {
-            fs.copyToLocalFile(new Path("/test/example.txt"),new Path("/home/hadoop/"));
-            System.out.println("a file is gotten from HDFS！");
-        }catch (Exception e){
-            System.out.println("a exception");
-        }
-    }
-    public void detele() {
-        try {
-            boolean delete = fs.delete(new Path("/test/example.txt"), true);
-            System.out.println("a file is deleted！");
-        }catch (Exception e){
-            System.out.println("a exception");
-        }
-    }
-}
+# HDFS API的使用
+  
+```java
 
 ```
+  
 # 补充:数据均衡
-数据创建删除和磁盘存储饱和导致数据分配不平衡，从而可能导致map任务分配空的数据节点，进而导致网络带宽的消耗，此时需要平衡数据的分配。
+数据创建，删除和磁盘存储饱和导致数据分配不平衡，从而可能导致map任务分配空的数据节点，进而导致网络带宽的消耗，此时需要平衡数据的分配。
 ## 原则
 + 数据平衡不能导致数据块减少，数据块备份丢失  
 + 管理员可以中止数据平衡进程  
@@ -292,7 +254,7 @@ public class HDFSapp {
 ## 过程
 + 数据均衡服务（Rebalancing Server）首先要求 NameNode 生成 DataNode 数据分布分析报告,获取每个DataNode磁盘使用情况  
 + Rebalancing Server汇总需要移动的数据分布情况，计算具体数据块迁移路线图。数据块迁移路线图，确保网络内最短路径  
-+ 开始数据块迁移任务，Proxy Source Data Node复制一块需要移动数据块  
++ 开始数据块迁移任务，Proxy Source Data Node复制一块需要移动的数据块  
 + 将复制的数据块复制到目标DataNode上  
 + 删除原始数据块  
 + 目标DataNode向Proxy Source Data Node确认该数据块迁移完成  
