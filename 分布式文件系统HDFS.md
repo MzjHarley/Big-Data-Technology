@@ -196,14 +196,14 @@ FileSystem中的create()方法返回一个输出流FsDataOutputStream对象，�
 
 在读取数据的过程中，如果客户端和数据节点通信时出现错误，就会尝试连接包含此数据块的下一个数据节点。  
 ## 写数据
-+ 1.客户端通过FileSystem.creat()方法打开文件返回FSDataOutputStream，对应在HDFS中，DistributedFileSystem调用create()方法创建一个输入流DFSOutputStream  
++ 1.客户端通过FileSystem.creat()方法打开文件返回FSDataOutputStream，对应在HDFS中，DistributedFileSystem调用create()方法创建一个输出流DFSOutputStream  
 + 2.在DFSInputStream的构造函数中，输入流通过RPC远程调用名称节点在文件系统的命名空间创建一个新的文件。  
     在这过程中名称节点会执行一些检查，比如文件是否存在，客户端是否有权限创建文件等。  
     然后名称节点会构造一个新文件，并添加文件信息，远程过程调用后DistributedFileSystem会用DFSInputStream会实例化FSDataInputStream并返回给客户端  
     客户端会使用这个输出流写入数据  
 + 3.获得输出流FSDataOutputStream后，调用write()方法向HDFS问件写入数据。  
 + 4.客户端向FSDataOutputStream写入数据会被分成一个个分包放入到DFSOutputStream对象的内部队列。输出流会向名称节点申请保存文件和副本数据块的若干个数据节点。  
-    这些数据节点形成一个数据流管道，将数据包分发到各个数据节点。  
+    这些数据节点形成一个数据流管道，队列中的打包成数据包通过数据流管道分发到各个数据节点。  
 + 5.因为数据通过网络发送到不同机器上的各个数据节点，因此为了保证所有数据节点的数据都是准确的，接收到数据的数据节点要向发送者发送确认包。  
     确认包沿着数据流管道逆流而上依次经过各个数据节点并最终发往客户端，客户端接收到确认包后，会将对应的分包从内部队列中移除。  
     不断执行3 ~ 5步直至数据写完.  
