@@ -217,8 +217,8 @@ FileSystem中的create()方法返回一个输出流FsDataOutputStream对象，�
 |hadoop fs -cat[file]|打开文件|
 |hadoop fs -chgrp [-R] group [F/D]|更改文件/目录的所属组|
 |hadoop fs -chown [-R] owner[:group] [F/D]|更改目录/文件所有者[所有组]|
-|hadoop fs -chmod [-R]{ug0}{+-=}{rwx}[F/D]|更改文件目录权限|
-|hadoop fs -tail [-f][F]||显示文件最后1KB内容，-f持续监测新添加的内容|
+|hadoop fs -chmod [-R]{ug0}{+-=}{rwx}[F/D]|更改文件/目录权限|
+|hadoop fs -tail [-f][F]|显示文件最后1KB内容，-f持续监测新添加的内容|
 |hadoop fs -stat [format] [F/D]|显示文件/目录信息，不加format返回文件创建日期|
 |hadoop fs -touchz [F]|创建文件|
 |hadoop fs -mkdir [-p] [D]|创建目录|
@@ -228,10 +228,10 @@ FileSystem中的create()方法返回一个输出流FsDataOutputStream对象，�
 |hadoop fs -du [F/D]|显示指定文件及文件夹中所有文件大小|
 |hadoop fs -expunge|清空回收站|
 |hadoop fs -get <src> <localdst>|从hadoop文件系统中复制文件/目录到本地|
-|hadoop fs -getmerge[-nl]<src><localdst>||从hadoop文件系统中合并文件写入到本地，-nl在每个文件结尾添加一个换行符|
+|hadoop fs -getmerge[-nl]<src><localdst>|从hadoop文件系统中合并文件写入到本地，-nl在每个文件结尾添加一个换行符|
 |hadoop fs -put <localdst> <src>|从本地复制文件/目录到hadoop文件系统中|
 |hadoop fs -moveFromLocal <localdst> <src>|从本地复制文件/目录到hadoop文件系统中，删除本地文件|
-|hadoop fs -mv <src> <dst>||
+|hadoop fs -mv <src> <dst>|移动文件或目录|
 |hadoop fs -rm [F]|删除文件|
 |hadoop fs -rm -r [D]|删除目录|
 |hadoop fs -test [-zed] [F/D]|检验文件是否为存在，空，为目录|
